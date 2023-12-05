@@ -24,6 +24,13 @@ set(KINETO_LIBRARY_TYPE "default" CACHE STRING
 set_property(CACHE KINETO_LIBRARY_TYPE PROPERTY STRINGS default shared)
 option(KINETO_BUILD_TESTS "Build kineto unit tests" ON)
 
+set(CUDA_SOURCE_DIR  "/usr/local/cuda")
+set(CUPTI_INCLUDE_DIR "/usr/local/cuda/extras/CUPTI/include")
+set(CUDA_cupti_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libcupti.so")
+set(CUDA_nvperf_host_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libnvperf_host.so")
+
+set(LIBKINETO_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+
 set(LIBKINETO_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(LIBKINETO_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(LIBKINETO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -82,6 +89,8 @@ set_target_properties(kineto_base kineto_api PROPERTIES
       CXX_VISIBILITY_PRESET hidden)
 
 set(KINETO_COMPILE_OPTIONS "-DKINETO_NAMESPACE=libkineto")
+list(APPEND KINETO_COMPILE_OPTIONS "-DHAS_CUPTI_RANGE_PROFILER")
+
 list(APPEND KINETO_COMPILE_OPTIONS "-DFMT_HEADER_ONLY")
 if(NOT MSVC)
   list(APPEND KINETO_COMPILE_OPTIONS "-std=c++14")
@@ -195,4 +204,5 @@ install(EXPORT kinetoLibraryConfig DESTINATION share/cmake/kineto
 
 if(KINETO_BUILD_TESTS)
   add_subdirectory(test)
+  add_subdirectory("${LIBKINETO_THIRDPARTY_DIR}/googletest")
 endif()

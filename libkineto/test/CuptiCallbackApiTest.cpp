@@ -14,7 +14,7 @@ using namespace libkineto;
 
 const size_t some_data = 42;
 
-std::atomic<int> simple_cb_calls = 0;
+std::atomic<int> simple_cb_calls{0};
 
 void simple_cb(
     CUpti_CallbackDomain domain,
