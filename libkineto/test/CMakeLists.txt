@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
-find_package(CUDAToolkit)
 set(SUB_PROFILER "${CMAKE_CURRENT_SOURCE_DIR}/MockActivitySubProfiler.cpp")
 
 
@@ -23,9 +22,10 @@ target_include_directories(intermediate_lib INTERFACE "${LIBKINETO_DIR}"
         "${FMT_SOURCE_DIR}/include"
         "${LIBKINETO_THIRDPARTY_DIR}/googletest/googletest/include"
         "${CUPTI_INCLUDE_DIR}"
-        "${CMAKE_CURRENT_SOURCE_DIR}")
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CUDA_SOURCE_DIR}/include")
 
-target_link_libraries(intermediate_lib INTERFACE gtest_main gmock kineto CUDA::cudart)
+target_link_libraries(intermediate_lib INTERFACE gtest_main gmock kineto "${CUDA_SOURCE_DIR}/lib64/libcudart.so")
 
 add_library(subprofiler STATIC MockActivitySubProfiler.cpp)
 target_include_directories(subprofiler PUBLIC "${CMAKE_SOURCE_DIR}")
