@@ -1,0 +1,92 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+
+class Logger {
+  Logger(int severity, int line, const char* filePath, int errnum = 0);
+  ~Logger();
+  inline std::ostream& stream()
+  static inline void setSeverityLevel(int level)
+  static inline int severityLevel()
+  static inline void setVerboseLogLevel(int level)
+  static inline int verboseLogLevel()
+  static constexpr uint64_t rol(uint64_t val, int amount)
+  static constexpr uint64_t hash(const char* s)
+  static constexpr uint64_t hash_rec(const char* s, int off)
+  static constexpr const char* basename(const char* s, int off = 0)
+  static void setVerboseLogModules(const std::vector<std::string>& modules);
+  static inline uint64_t verboseLogModules()
+  static void clearLoggerObservers()
+  static void addLoggerObserver(ILoggerObserver* observer);
+  static void removeLoggerObserver(ILoggerObserver* observer);
+  static void addLoggerObserverDevice(int64_t device);
+  static void addLoggerObserverEventCount(int64_t count);
+  static void setLoggerObserverTraceDurationMS(int64_t duration);
+  static void setLoggerObserverTraceID(const std::string& tid);
+  static void setLoggerObserverGroupTraceID(const std::string& gtid);
+  static void addLoggerObserverDestination(const std::string& dest);
+  static void setLoggerObserverOnDemand();
+  static void addLoggerObserverAddMetadata(const std::string& key, const std::string& value);
+
+  std::stringstream buf_;
+  std::ostream& out_;
+  int errnum_;
+  int messageSeverity_;
+  static std::atomic_int severityLevel_;
+  static std::atomic_int verboseLogLevel_;
+  static std::atomic<uint64_t> verboseLogModules_;
+  static std::set<ILoggerObserver*>& loggerObservers();
+  static std::mutex& loggerObserversMutex();
+}
+
+class VoidLogger {
+  VoidLogger()
+  void operator&(std::ostream&)
+}
+
+enum LoggerOutputType {
+  VERBOSE = 0,
+  INFO = 1,
+  WARNING = 2,
+  ERROR = 3,
+  STAGE = 4,
+  ENUM_COUNT = 5
+}
+
+abstract class ILoggerObserver {
+  virtual ~ILoggerObserver() = default;
+  virtual void write(const std::string& message, LoggerOutputType ot) = 0;
+  virtual const std::map<LoggerOutputType, std::vector<std::string>> extractCollectorMetadata() = 0;
+  virtual void reset() = 0;
+  virtual void addDevice(const int64_t device) = 0;
+  virtual void setTraceDurationMS(const int64_t duration) = 0;
+  virtual void addEventCount(const int64_t count) = 0;
+  virtual void setTraceID(const std::string&) {}
+  virtual void setGroupTraceID(const std::string&) {}
+  virtual void addDestination(const std::string& dest) = 0;
+  virtual void setTriggerOnDemand() {}
+  virtual void addMetadata(const std::string& key, const std::string& value) = 0;
+}
+
+class LoggerCollector {
+    LoggerCollector()
+    void write(const std::string& message, LoggerOutputType ot = ERROR) override
+    const std::map<LoggerOutputType, std::vector<std::string>> extractCollectorMetadata() override
+    void reset() override
+    void addDevice(const int64_t device) override
+    void setTraceDurationMS(const int64_t duration) override
+    void addEventCount(const int64_t count) override
+    void addDestination(const std::string& dest) override
+    void addMetadata(const std::string& key, const std::string& value)
+
+    std::map<LoggerOutputType, std::vector<std::string>> buckets_;
+    std::set<int64_t> devices;
+    int64_t trace_duration_ms{0};
+    std::atomic<uint64_t> event_count{0};
+    std::set<std::string> destinations;
+}
+
+LoggerCollector ..|> ILoggerObserver
+ILoggerObserver "0..n" ..* "1" Logger
+LoggerCollector ..> LoggerOutputType
+@enduml
