@@ -45,3 +45,5 @@ foreach(src ${SOURCES_CPP})
     target_link_libraries(${target} PUBLIC intermediate_lib subprofiler)
 endforeach()
 
+add_subdirectory(dlprof)
+

@@ -1,0 +1,219 @@
+@startuml
+'https://plantuml.com/class-diagram
+enum ActivityType {
+    CPU_OP = 0,
+    USER_ANNOTATION,
+    GPU_USER_ANNOTATION,
+    GPU_MEMCPY,
+    GPU_MEMSET,
+    CONCURRENT_KERNEL,
+    EXTERNAL_CORRELATION,
+    CUDA_RUNTIME,
+    CUDA_DRIVER,
+    CPU_INSTANT_EVENT,
+    PYTHON_FUNCTION,
+    OVERHEAD,
+    MTIA_RUNTIME,
+    MTIA_CCP_EVENTS,
+    CUDA_SYNC,
+    GLOW_RUNTIME,
+    CUDA_PROFILER_RANGE,
+    HPU_OP,
+    XPU_RUNTIME,
+    ENUM_COUNT,
+    OPTIONAL_ACTIVITY_TYPE_START = CUDA_SYNC,
+}
+
+struct ITraceActivity {
+  virtual ~ITraceActivity() {}
+  virtual int64_t deviceId() const = 0;
+  virtual int64_t resourceId() const = 0;
+  virtual int32_t getThreadId() const = 0;
+  virtual int64_t timestamp() const = 0;
+  virtual int64_t duration() const = 0;
+  virtual int64_t correlationId() const = 0;
+  virtual int flowType() const = 0;
+  virtual int flowId() const = 0;
+  virtual bool flowStart() const = 0;
+  virtual ActivityType type() const = 0;
+  virtual const std::string name() const = 0;
+  virtual const ITraceActivity* linkedActivity() const = 0;
+  virtual const TraceSpan* traceSpan() const = 0;
+  virtual void log(ActivityLogger& logger) const = 0;
+  virtual const std::string metadataJson() const = 0;
+  virtual const std::string getMetadataValue(const std::string& key) const
+  static int64_t nsToUs(int64_t ns)
+}
+
+class ActivityLogger {
+  virtual ~ActivityLogger() = default;
+  struct OverheadInfo {
+    explicit OverheadInfo(const std::string& name)
+    const std::string name;
+  };
+
+  virtual void handleDeviceInfo(const DeviceInfo &info, uint64_t time)
+  virtual void handleResourceInfo(const ResourceInfo& info, int64_t time) = 0;
+  virtual void handleOverheadInfo(const OverheadInfo& info, int64_t time) = 0;
+  virtual void handleTraceSpan(const TraceSpan& span) = 0;
+  virtual void handleActivity(const libkineto::ITraceActivity& activity) = 0;
+  virtual void handleGenericActivity(const libkineto::GenericTraceActivity& activity) = 0;
+  virtual void handleTraceStart(const std::unordered_map<std::string, std::string>& metadata) = 0;
+  void handleTraceStart()
+  virtual void finalizeTrace()
+  ActivityLogger() = default;
+}
+
+struct TraceSpan {
+  TraceSpan();
+  int64_t startTime{0};
+  int64_t endTime{0};
+  int opCount{0};
+  int iteration{-1};
+  std::string name;
+  std::string prefix;
+}
+
+class ActivityTraceInterface {
+ public:
+  virtual ~ActivityTraceInterface() {}
+  virtual const std::vector<const ITraceActivity*>* activities()
+  virtual void save(const std::string& path)
+}
+
+class ActivityLoggerFactory {
+  using FactoryFunc = std::function<std::unique_ptr<ActivityLogger>(const std::string& url)>;
+  void addProtocol(const std::string& protocol, FactoryFunc f)
+  std::unique_ptr<ActivityLogger> makeLogger(const std::string& url) const
+  static std::string tolower(std::string s)
+  static std::string extractProtocol(std::string url)
+  static std::string stripProtocol(std::string url)
+  std::map<std::string, FactoryFunc> factories_;
+}
+
+
+class ActivityTrace {
+  ActivityTrace(std::unique_ptr<MemoryTraceLogger> tmpLogger, const ActivityLoggerFactory& factory)
+  const std::vector<const ITraceActivity*>* activities() override
+  void save(const std::string& url) override
+  std::unique_ptr<MemoryTraceLogger> memLogger_;
+  const ActivityLoggerFactory& loggerFactory_;
+}
+
+class MemoryTraceLogger {
+    +MemoryTraceLogger (const Config& config)
+    +handleDeviceInfo (const DeviceInfo& info, uint64_t time)
+    +void handleResourceInfo(const ResourceInfo& info, int64_t time)
+    +void handleOverheadInfo(const OverheadInfo& info, int64_t time)
+    +void handleTraceSpan(const TraceSpan& span)
+    +void addActivityWrapper(const T& act)
+    +void handleActivity(const ITraceActivity& activity)
+    +void handleGenericActivity(const GenericTraceActivity& activity)
+    +void handleTraceStart(const std::unordered_map<std::string, std::string>& metadata)
+    +void finalizeTrace()
+    +const std::vector<const ITraceActivity*>* traceActivities()
+    +void log(ActivityLogger& logger)
+    +void setLoggerMetadata
+
+    -std::unique_ptr<Config> config_;
+    -std::vector<const ITraceActivity*> activities_;
+    -std::vector<std::pair<DeviceInfo, int64_t>> deviceInfoList_;
+    -std::vector<std::pair<ResourceInfo, int64_t>> resourceInfoList_;
+    -std::unique_ptr<ActivityBuffers> buffers_;
+    -std::unordered_map<std::string, std::string> metadata_;
+    -std::unordered_map<std::string, std::vector<std::string>> loggerMetadata_;
+    -int64_t endTime_{0};
+}
+
+class ChromeTraceLogger {
+    explicit ChromeTraceLogger(const std::string& traceFileName);
+    void handleDeviceInfo(const DeviceInfo& info, uint64_t time) override;
+    void handleOverheadInfo(const OverheadInfo& info, int64_t time) override
+    void handleResourceInfo(const ResourceInfo& info, int64_t time) override;
+    void handleTraceSpan(const TraceSpan& span) override;
+    void handleActivity(const ITraceActivity& activity) override;
+    void handleGenericActivity(const GenericTraceActivity& activity) override;
+    void handleTraceStart(const std::unordered_map<std::string, std::string>& metadata) override;
+    void finalizeTrace()
+    std::string traceFileName()
+
+    -void handleLink(char type, const ITraceActivity& e,int64_t id, const std::string& name);
+    -void addIterationMarker(const TraceSpan& span);
+    -void openTraceFile();
+    -void handleGenericInstantEvent(const ITraceActivity& op);
+    -void handleGenericLink(const ITraceActivity& activity);
+    -void metadataToJSON(const std::unordered_map<std::string, std::string>& metadata);
+    -std::string& sanitizeStrForJSON(std::string& value);
+
+    std::string fileName_;
+    std::string tempFileName_;
+    std::ofstream traceOf_;
+}
+
+class CuptiActivityBuffer {
+    explicit CuptiActivityBuffer(size_t size)；
+    size_t size() const
+    void setSize(size_t size)
+    uint8_t* data()
+
+    std::vector<uint8_t> buf_
+    size_t size_
+    std::vector<std::unique_ptr<const ITraceActivity>> wrappers_;
+}
+
+entity CuptiActivityBufferMap {
+    std::map<uint8_t*, std::unique_ptr<CuptiActivityBuffer>>;
+}
+
+class GenericTraceActivity {
+    GenericTraceActivity()
+    GenericTraceActivity(const TraceSpan& trace, ActivityType type, const std::string& name)
+    int64_t deviceId() const override
+    int64_t resourceId() const override
+    int32_t getThreadId() const override
+    int64_t timestamp() const override
+    int64_t duration() const override
+    int64_t correlationId() const override
+    ActivityType type() const override
+    const ITraceActivity* linkedActivity() const override
+    int flowType() const override
+    int flowId() const override
+    bool flowStart() const override
+    const std::string name() const override
+    const TraceSpan* traceSpan() const override
+    void log(ActivityLogger& logger) const override;
+    void addMetadata(const std::string& key, const ValType& value)
+    void addMetadataQuoted(const std::string& key, const std::string& value)
+    const std::string getMetadataValue(const std::string& key) const override
+    const std::string metadataJson() const override
+    virtual ~GenericTraceActivity() override
+    int64_t startTime{0};
+    int64_t endTime{0};
+    int32_t id{0};
+    int32_t device{0};
+    int32_t resource{0};
+    int32_t threadId{0};
+    ActivityType activityType;
+    std::string activityName;
+    struct Flow {
+        Flow(): id(0), type(0), start(0) {}
+        uint32_t id : 27;
+        uint32_t type : 4;
+        uint32_t start : 1;
+    } flow;
+    const ITraceActivity* linked{nullptr};
+    const TraceSpan* traceSpan_;
+    std::unordered_map<std::string, std::pair<std::string, bool>> metadataMap_;
+}
+
+struct CpuTraceBuffer {
+  template <class... Args>
+  void emplace_activity(Args&&... args)
+  static GenericTraceActivity& toRef(std::unique_ptr<GenericTraceActivity>& ref)
+  static const GenericTraceActivity& toRef(const std::unique_ptr<GenericTraceActivity>& ref)
+  static const GenericTraceActivity& toRef(const std::unique_ptr<GenericTraceActivity>& ref)
+  TraceSpan span{0, 0, "none"};
+  int gpuOpCount;
+  std::deque<std::unique_ptr<GenericTraceActivity>> activities;
+}
+@enduml
