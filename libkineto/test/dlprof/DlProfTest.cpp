@@ -60,7 +60,7 @@ TEST_F(DlProfTest, callid) {
     int* deviceArray = nullptr;
     int dataCount = 1000;
     std::unordered_map<int, int> info_pre; // size : callid
-    std::unordered_map<int, std::pair<int, int>> info_post; // size: callid
+    std::unordered_map<int, std::pair<int, int>> info_post; // trace id: <size: callid>
     std::set<int> traceid_set;
     hostArray = createAscendHostMemory(dataCount);
     cudaMalloc((void**)&deviceArray, dataCount * sizeof(int));
@@ -101,7 +101,7 @@ TEST_F(DlProfTest, callid) {
             }
         }
     }
-    std::cout << std::endl;
+
     for (auto& element : data["submits"]) {
         int trace_id = element["trace_id"].template get<int>();
         auto it = traceid_set.find(trace_id);
