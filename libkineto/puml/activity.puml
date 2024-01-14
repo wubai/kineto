@@ -45,6 +45,9 @@ struct ITraceActivity {
   static int64_t nsToUs(int64_t ns)
 }
 
+
+ITraceActivity ..> ActivityType
+
 class ActivityLogger {
   virtual ~ActivityLogger() = default;
   struct OverheadInfo {
@@ -74,12 +77,18 @@ struct TraceSpan {
   std::string prefix;
 }
 
+
+ActivityLogger ..> TraceSpan
+ActivityLogger ..> GenericTraceActivity
+
 class ActivityTraceInterface {
  public:
   virtual ~ActivityTraceInterface() {}
   virtual const std::vector<const ITraceActivity*>* activities()
   virtual void save(const std::string& path)
 }
+ActivityTraceInterface ..> ITraceActivity
+note top of ActivityTraceInterface: 使用vector存储ITraceActivity*
 
 class ActivityLoggerFactory {
   using FactoryFunc = std::function<std::unique_ptr<ActivityLogger>(const std::string& url)>;
@@ -90,7 +99,8 @@ class ActivityLoggerFactory {
   static std::string stripProtocol(std::string url)
   std::map<std::string, FactoryFunc> factories_;
 }
-
+note top of ActivityLoggerFactory: 负责管理ActivityLogger生成方式
+ActivityLoggerFactory ..> ActivityLogger
 
 class ActivityTrace {
   ActivityTrace(std::unique_ptr<MemoryTraceLogger> tmpLogger, const ActivityLoggerFactory& factory)
@@ -98,6 +108,19 @@ class ActivityTrace {
   void save(const std::string& url) override
   std::unique_ptr<MemoryTraceLogger> memLogger_;
   const ActivityLoggerFactory& loggerFactory_;
+}
+
+class ActivityTrace implements ActivityTraceInterface
+ActivityTrace ..> ActivityLoggerFactory
+ActivityTrace ..> MemoryTraceLogger
+ActivityTrace ..> ITraceActivity
+note top of ActivityTrace: 负责管理ActivityLogger生成方式
+
+struct ActivityBuffers {
+  std::list<std::unique_ptr<libkineto::CpuTraceBuffer>> cpu;
+  std::unique_ptr<CuptiActivityBufferMap> gpu;
+  const ITraceActivity& addActivityWrapper(const T& act)
+  std::vector<std::unique_ptr<const ITraceActivity>> wrappers_;
 }
 
 class MemoryTraceLogger {
@@ -124,6 +147,10 @@ class MemoryTraceLogger {
     -std::unordered_map<std::string, std::vector<std::string>> loggerMetadata_;
     -int64_t endTime_{0};
 }
+MemoryTraceLogger ..> ITraceActivity
+MemoryTraceLogger ..> GenericTraceActivity
+MemoryTraceLogger ..> ActivityBuffers
+class MemoryTraceLogger implements ActivityLogger
 
 class ChromeTraceLogger {
     explicit ChromeTraceLogger(const std::string& traceFileName);
@@ -149,6 +176,10 @@ class ChromeTraceLogger {
     std::string tempFileName_;
     std::ofstream traceOf_;
 }
+class ChromeTraceLogger implements ActivityLogger
+ChromeTraceLogger ..> ITraceActivity
+ChromeTraceLogger ..> GenericTraceActivity
+ChromeTraceLogger ..> ActivityBuffers
 
 class CuptiActivityBuffer {
     explicit CuptiActivityBuffer(size_t size)；
@@ -160,10 +191,12 @@ class CuptiActivityBuffer {
     size_t size_
     std::vector<std::unique_ptr<const ITraceActivity>> wrappers_;
 }
+CuptiActivityBuffer ..> ITraceActivity
 
 entity CuptiActivityBufferMap {
     std::map<uint8_t*, std::unique_ptr<CuptiActivityBuffer>>;
 }
+CuptiActivityBufferMap ..> CuptiActivityBuffer
 
 class GenericTraceActivity {
     GenericTraceActivity()
@@ -216,4 +249,9 @@ struct CpuTraceBuffer {
   int gpuOpCount;
   std::deque<std::unique_ptr<GenericTraceActivity>> activities;
 }
+note top of CpuTraceBuffer: libkineto.h 以deque形式维护GenericTraceActivity
+
+ActivityBuffers ..> CpuTraceBuffer
+ActivityBuffers ..> CuptiActivityBufferMap
+
 @enduml

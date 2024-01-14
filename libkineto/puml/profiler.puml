@@ -1,0 +1,26 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+class LibkinetoApi {
+    explicit LibkinetoApi(ConfigLoader& configLoader)
+    void registerClient(ClientInterface* client);
+    void registerProfiler(std::unique_ptr<ActivityProfilerInterface> profiler)
+    ActivityProfilerInterface& activityProfiler()
+    ClientInterface* client()
+    void initProfilerIfRegistered()
+    bool isProfilerInitialized()
+    bool isProfilerRegistered()
+    void suppressLogMessages()
+    ConfigLoader& configLoader()
+    void registerProfilerFactory(ChildActivityProfilerFactory factory)
+    void initChildActivityProfilers()
+    void initClientIfRegistered();
+
+    ConfigLoader& configLoader_;
+    std::unique_ptr<ActivityProfilerInterface> activityProfiler_{};
+    ClientInterface* client_{};
+    int32_t clientRegisterThread_{0};
+    std::vector<ChildActivityProfilerFactory> childProfilerFactories_;
+}
+
+@enduml
