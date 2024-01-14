@@ -23,4 +23,35 @@ class LibkinetoApi {
     std::vector<ChildActivityProfilerFactory> childProfilerFactories_;
 }
 
+class ActivityProfilerInterface {
+  virtual ~ActivityProfilerInterface()
+  virtual void init()
+  virtual bool isInitialized()
+  virtual bool isActive()
+  virtual void scheduleTrace(const std::string& configStr)
+  virtual void prepareTrace(const std::set<ActivityType>& activityTypes, const std::string& configStr = "")
+  virtual void startTrace()
+  virtual std::unique_ptr<ActivityTraceInterface> stopTrace()
+  virtual void step()
+  virtual void pushCorrelationId(uint64_t id)
+  virtual void popCorrelationId()
+  virtual void transferCpuTrace(std::unique_ptr<CpuTraceBuffer> traceBuffer)
+  virtual void pushUserCorrelationId(uint64_t)
+  virtual void popUserCorrelationId()
+  virtual void recordThreadInfo()
+  virtual void addMetadata(const std::string& key, const std::string& value)
+  virtual void addChildActivityProfiler(std::unique_ptr<IActivityProfiler> profiler)
+  virtual void logInvariantViolation(const std::string&, const std::string&, const std::string&, const std::string& = "")
+}
+
+class ActivityProfilerProxy {
+}
+class ActivityProfilerProxy implements ActivityProfilerInterface
+
+struct ConfigLoader::ConfigHandler {
+}
+
+class ActivityProfilerController {
+}
+class ActivityProfilerController extends ConfigLoader::ConfigHandler
 @enduml
