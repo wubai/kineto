@@ -53,7 +53,7 @@ class DlprofActivityApi {
                         std::function<const ITraceActivity*(int32_t)> linkedActivity,
                         int64_t startTime, int64_t endTime);
 
-//  void setMaxBufferSize(int size);
+  void setMaxBufferSize(int size);
 
   std::atomic_bool stopCollection{false};
 
