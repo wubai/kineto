@@ -43,6 +43,7 @@ namespace KINETO_NAMESPACE {
 class Config;
 class CuptiActivityApi;
 class RoctracerActivityApi;
+class DlprofActivityApi;
 
 // This struct is a derived snapshot of the Config. And should not
 // be mutable after construction.
@@ -109,6 +110,7 @@ class CuptiActivityProfiler {
  public:
   CuptiActivityProfiler(CuptiActivityApi& cupti, bool cpuOnly);
   CuptiActivityProfiler(RoctracerActivityApi& rai, bool cpuOnly);
+  CuptiActivityProfiler(DlprofActivityApi& rai, bool cpuOnly);
   CuptiActivityProfiler(const CuptiActivityProfiler&) = delete;
   CuptiActivityProfiler& operator=(const CuptiActivityProfiler&) = delete;
 
@@ -370,7 +372,11 @@ class CuptiActivityProfiler {
 #ifdef HAS_ROCTRACER
   RoctracerActivityApi& cupti_;		// Design failure here
 #else
-  CuptiActivityApi& cupti_;
+  #ifdef HAS_DLPROF
+    DlprofActivityApi& cupti_;
+  #else
+    CuptiActivityApi& cupti_;
+  #endif
 #endif
 
   enum class RunloopState {
@@ -450,6 +456,7 @@ class CuptiActivityProfiler {
     int32_t out_of_range_events = 0;
     int32_t gpu_and_cpu_op_out_of_order = 0;
     int32_t blocklisted_runtime_events = 0;
+    // dlprof: fix it later
 #if defined(HAS_CUPTI) || defined(HAS_ROCTRACER)
     int32_t unexepected_cuda_events = 0;
     bool cupti_stopped_early = false;

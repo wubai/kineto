@@ -30,7 +30,7 @@ set(KINETO_LIBRARY_TYPE "default" CACHE STRING
 set_property(CACHE KINETO_LIBRARY_TYPE PROPERTY STRINGS default shared)
 option(KINETO_BUILD_TESTS "Build kineto unit tests" ON)
 
-set(CUDA_SOURCE_DIR  "/usr/local/cuda")
+#set(CUDA_SOURCE_DIR  "/usr/local/cuda")
 set(CUPTI_INCLUDE_DIR "/usr/local/cuda/extras/CUPTI/include")
 set(CUDA_cupti_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libcupti.so")
 set(CUDA_nvperf_host_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libnvperf_host.so")
@@ -57,6 +57,11 @@ if (NOT ROCM_SOURCE_DIR)
     message(INFO " ROCM_SOURCE_DIR = ${ROCM_SOURCE_DIR}")
 endif()
 
+if (NOT DL_SDK_DIR)
+    set(DL_SDK_DIR "$ENV{DL_SDK_DIR}")
+    message(INFO " DL_SDK_DIR = ${DL_SDK_DIR}")
+endif()
+
 # Set LIBKINETO_NOCUPTI to explicitly disable CUPTI
 # Otherwise, CUPTI is disabled if not found
 IF (NOT CUDA_SOURCE_DIR OR NOT CUPTI_INCLUDE_DIR OR NOT CUDA_cupti_LIBRARY)
@@ -67,6 +72,10 @@ IF (NOT ROCM_SOURCE_DIR AND NOT ROCTRACER_INCLUDE_DIR)
     set(LIBKINETO_NOROCTRACER ON CACHE BOOL "" FORCE)
 endif()
 
+IF (NOT DL_SDK_DIR)
+    set(LIBKINETO_NODLPROF ON CACHE BOOL "" FORCE)
+endif()
+
 # Define file lists
 if (LIBKINETO_NOCUPTI AND LIBKINETO_NOROCTRACER)
     get_filelist("get_libkineto_cpu_only_srcs(with_api=False)" LIBKINETO_SRCS)
@@ -74,6 +83,9 @@ if (LIBKINETO_NOCUPTI AND LIBKINETO_NOROCTRACER)
 elseif(NOT LIBKINETO_NOROCTRACER)
     get_filelist("get_libkineto_roctracer_srcs(with_api=False)" LIBKINETO_SRCS)
     message(INFO " Building with roctracer")
+elseif(NOT LIBKINETO_NODLPROF)
+    get_filelist("get_libkineto_dlprof_srcs(with_api=False)" LIBKINETO_SRCS)
+    message(INFO " Building with dlprof")
 else()
     get_filelist("get_libkineto_cupti_srcs(with_api=False)" LIBKINETO_SRCS)
 endif()
@@ -114,6 +126,10 @@ if (NOT LIBKINETO_NOROCTRACER)
     target_compile_options(kineto_base PRIVATE "-D__HIP_PLATFORM_AMD__")
 endif()
 
+if (NOT LIBKINETO_NODLPROF)
+    target_compile_options(kineto_base PRIVATE "-DHAS_DLPROF")
+endif()
+
 target_compile_options(kineto_base PRIVATE "${KINETO_COMPILE_OPTIONS}")
 target_compile_options(kineto_api PRIVATE "${KINETO_COMPILE_OPTIONS}")
 
@@ -151,6 +167,10 @@ if (NOT ROCM_INCLUDE_DIRS)
     set(ROCM_INCLUDE_DIRS "${ROCM_SOURCE_DIR}/include")
 endif()
 
+if (NOT DL_INCLUDE_DIRS)
+    set(DL_INCLUDE_DIRS "${DL_SDK_DIR}/include")
+endif()
+
 set(DYNOLOG_INCLUDE_DIR "${LIBKINETO_THIRDPARTY_DIR}/dynolog/")
 set(IPCFABRIC_INCLUDE_DIR "${DYNOLOG_INCLUDE_DIR}/dynolog/src/ipcfabric/")
 
@@ -171,7 +191,8 @@ target_include_directories(kineto_base PUBLIC
       $<BUILD_INTERFACE:${CUPTI_INCLUDE_DIR}>
       $<BUILD_INTERFACE:${CUDA_INCLUDE_DIRS}>
       $<BUILD_INTERFACE:${ROCTRACER_INCLUDE_DIR}>
-      $<BUILD_INTERFACE:${ROCM_INCLUDE_DIRS}>)
+      $<BUILD_INTERFACE:${ROCM_INCLUDE_DIRS}>
+      $<BUILD_INTERFACE:${DL_INCLUDE_DIRS}>)
 
 target_include_directories(kineto_api PUBLIC
       $<BUILD_INTERFACE:${FMT_INCLUDE_DIR}>
@@ -205,6 +226,12 @@ endif()
 if(NOT LIBKINETO_NOCUPTI)
   target_link_libraries(kineto "${CUDA_cupti_LIBRARY}")
 endif()
+
+if(NOT LIBKINETO_NODLPROF)
+# add dlprof lib later
+#  target_link_libraries(kineto "${CUDA_cupti_LIBRARY}")
+endif()
+
 if(CUDA_nvperf_host_LIBRARY)
   target_link_libraries(kineto "${CUDA_nvperf_host_LIBRARY}")
 endif()

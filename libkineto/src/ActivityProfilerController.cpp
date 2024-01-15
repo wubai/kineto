@@ -20,6 +20,10 @@
 #include "RoctracerActivityApi.h"
 #endif
 
+#ifdef HAS_DLPROF
+#include "DlprofActivity.h"
+#endif
+
 #include "ThreadUtil.h"
 #include "output_json.h"
 #include "output_membuf.h"
@@ -49,8 +53,13 @@ ActivityProfilerController::ActivityProfilerController(
   profiler_ = std::make_unique<CuptiActivityProfiler>(
       RoctracerActivityApi::singleton(), cpuOnly);
 #else
-  profiler_ = std::make_unique<CuptiActivityProfiler>(
-      CuptiActivityApi::singleton(), cpuOnly);
+    #ifdef HAS_DLPROF
+        profiler_ = std::make_unique<CuptiActivityProfiler>(
+            DlprofActivityApi::singleton(), cpuOnly);
+    #else
+        profiler_ = std::make_unique<CuptiActivityProfiler>(
+            CuptiActivityApi::singleton(), cpuOnly);
+    #endif
 #endif
   configLoader_.addHandler(ConfigLoader::ConfigKind::ActivityProfiler, this);
 

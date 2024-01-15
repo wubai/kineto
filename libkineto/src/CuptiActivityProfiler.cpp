@@ -196,9 +196,15 @@ CuptiActivityProfiler::CuptiActivityProfiler(
     RoctracerActivityApi& cupti,
     bool cpuOnly)
 #else
-CuptiActivityProfiler::CuptiActivityProfiler(
-    CuptiActivityApi& cupti,
-    bool cpuOnly)
+  #ifdef HAS_DLPROF
+    CuptiActivityProfiler::CuptiActivityProfiler(
+        DlprofActivityApi& cupti,
+        bool cpuOnly)
+  #else
+    CuptiActivityProfiler::CuptiActivityProfiler(
+        CuptiActivityApi& cupti,
+        bool cpuOnly)
+  #endif
 #endif
     : cupti_(cupti),
       flushOverhead_{0, 0},
