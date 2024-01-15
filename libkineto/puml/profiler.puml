@@ -43,15 +43,152 @@ class ActivityProfilerInterface {
   virtual void addChildActivityProfiler(std::unique_ptr<IActivityProfiler> profiler)
   virtual void logInvariantViolation(const std::string&, const std::string&, const std::string&, const std::string& = "")
 }
+LibkinetoApi ..> ActivityProfilerInterface
 
 class ActivityProfilerProxy {
+    ActivityProfilerProxy(bool cpuOnly, ConfigLoader& configLoader);
+    ~ActivityProfilerProxy();
+    void init()
+    bool isInitialized()
+    bool isActive()
+    void recordThreadInfo()
+    void scheduleTrace(const std::string& configStr)
+    void scheduleTrace(const Config& config)
+    void prepareTrace(const std::set<ActivityType>& activityTypes, const std::string& configStr = "")
+    void startTrace()
+    void step()
+    std::unique_ptr<ActivityTraceInterface> stopTrace()
+    void pushCorrelationId(uint64_t id)
+    void popCorrelationId()
+    void pushUserCorrelationId(uint64_t id)
+    void popUserCorrelationId()
+    void transferCpuTrace(std::unique_ptr<CpuTraceBuffer> traceBuffer)
+    void addMetadata(const std::string& key, const std::string& value)
+    virtual void addChildActivityProfiler(std::unique_ptr<IActivityProfiler> profiler)
+    void logInvariantViolation()
+
+    bool cpuOnly_{true};
+    ConfigLoader& configLoader_;
+    ActivityProfilerController* controller_{nullptr};
 }
+
 class ActivityProfilerProxy implements ActivityProfilerInterface
 
 struct ConfigLoader::ConfigHandler {
+    virtual ~ConfigHandler() {}
+    virtual bool canAcceptConfig() = 0;
+    virtual void acceptConfig(const Config& cfg) = 0;
 }
 
 class ActivityProfilerController {
+    explicit ActivityProfilerController(ConfigLoader& configLoader, bool cpuOnly)
+    ~ActivityProfilerController();
+    static void addLoggerFactory(const std::string& protocol,ActivityLoggerFactory::FactoryFunc factory)
+    static void setInvariantViolationsLoggerFactory(const std::function<std::unique_ptr<InvariantViolationsLogger>()>& factory);
+    bool canAcceptConfig() override;
+    void acceptConfig(const Config& config) override;
+    void scheduleTrace(const Config& config);
+    void prepareTrace(const Config& config);
+    void startTrace();
+    void step();
+    std::unique_ptr<ActivityTraceInterface> stopTrace();
+    bool isActive()
+    void transferCpuTrace(std::unique_ptr<libkineto::CpuTraceBuffer> cpuTrace)
+    void recordThreadInfo()
+    void addChildActivityProfiler(std::unique_ptr<IActivityProfiler> profiler)
+    void addMetadata(const std::string& key, const std::string& value)
+    void logInvariantViolation(const std::string& profile_id, const std::string& assertion, const std::string& error, const std::string& group_profile_id = "")
+
+    bool shouldActivateIterationConfig(int64_t currentIter);
+    bool shouldActivateTimestampConfig(const std::chrono::time_point<std::chrono::system_clock>& now);
+    void profilerLoop();
+    void activateConfig(std::chrono::time_point<std::chrono::system_clock> now);
+    std::unique_ptr<Config> asyncRequestConfig_;
+    std::mutex asyncConfigLock_;
+
+    std::unique_ptr<CuptiActivityProfiler> profiler_;
+    std::unique_ptr<ActivityLogger> logger_;
+    std::shared_ptr<LoggerCollector> loggerCollectorFactory_;
+    std::thread* profilerThread_{nullptr};
+    std::atomic_bool stopRunloop_{false};
+    std::atomic<std::int64_t> iterationCount_{-1};
+    ConfigLoader& configLoader_;
 }
 class ActivityProfilerController extends ConfigLoader::ConfigHandler
+
+class CuptiActivityApi {
+  enum CorrelationFlowType {
+    Default,
+    User
+  };
+
+  std::atomic<uint32_t> teardownCupti_{0};
+  std::mutex finalizeMutex_;
+  std::condition_variable finalizeCond_;
+  CuptiActivityApi() = default;
+  virtual ~CuptiActivityApi()
+  static CuptiActivityApi& singleton()
+  static void pushCorrelationID(int id, CorrelationFlowType type)
+  static void popCorrelationID(CorrelationFlowType type)
+  void enableCuptiActivities(const std::set<ActivityType>& selected_activities)
+  void disableCuptiActivities(const std::set<ActivityType>& selected_activities)
+  void clearActivities()
+  void teardownContext()
+  virtual std::unique_ptr<CuptiActivityBufferMap> activityBuffers();
+  virtual const std::pair<int, size_t> processActivities(CuptiActivityBufferMap&,std::function<void(const CUpti_Activity*)> handler);
+
+  void setMaxBufferSize(int size);
+  void setDeviceBufferSize(size_t size);
+  void setDeviceBufferPoolLimit(size_t limit);
+
+  std::atomic_bool stopCollection{false};
+  int64_t flushOverhead{0};
+  static void forceLoadCupti();
+  static void preConfigureCUPTI();
+
+  int maxGpuBufferCount_{0};
+  CuptiActivityBufferMap allocatedGpuTraceBuffers_;
+  std::unique_ptr<CuptiActivityBufferMap> readyGpuTraceBuffers_;
+  std::mutex mutex_;
+  std::atomic<uint32_t> tracingEnabled_{0};
+  bool externalCorrelationEnabled_{false};
+
+  int processActivitiesForBuffer(uint8_t* buf, size_t validSize, std::function<void(const CUpti_Activity*)> handler)
+  static void CUPTIAPI bufferRequestedTrampoline(uint8_t** buffer, size_t* size, size_t* maxNumRecords);
+  static void CUPTIAPI bufferCompletedTrampoline(CUcontext ctx,uint32_t streamId, uint8_t* buffer, size_t /* unused */, size_t validSize)
+  void bufferRequested(uint8_t** buffer, size_t* size, size_t* maxNumRecords);
+  void bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* buffer, size_t /* unused */, size_t validSize);
+}
+ActivityProfilerController ..> CuptiActivityApi
+
+class RoctracerActivityApi {
+ public:
+  enum CorrelationFlowType {
+    Default,
+    User
+  };
+  RoctracerActivityApi();
+  virtual ~RoctracerActivityApi();
+  static RoctracerActivityApi& singleton();
+  static void pushCorrelationID(int id, CorrelationFlowType type);
+  static void popCorrelationID(CorrelationFlowType type);
+  void enableActivities(const std::set<ActivityType>& selected_activities);
+  void disableActivities(const std::set<ActivityType>& selected_activities);
+  void clearActivities();
+  int processActivities(ActivityLogger& logger, std::function<const ITraceActivity*(int32_t)> linkedActivity, int64_t startTime, int64_t endTime);
+  void setMaxBufferSize(int size);
+  std::atomic_bool stopCollection{false};
+  bool registered_{false};
+  uint32_t nextStringId_{2};
+  std::map<uint32_t, std::string> strings_;
+  std::map<std::string, uint32_t> reverseStrings_;
+  std::map<activity_correlation_id_t, uint32_t> kernelNames_;
+  std::map<activity_correlation_id_t, GenericTraceActivity> kernelLaunches_;
+  uint32_t activityMask_{0};
+  uint32_t activityMaskSnapshot_{0};
+  bool isLogged(libkineto::ActivityType atype);
+  RoctracerLogger *d;
+}
+
+ActivityProfilerController ..> RoctracerActivityApi
 @enduml
