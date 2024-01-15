@@ -21,7 +21,7 @@
 #endif
 
 #ifdef HAS_DLPROF
-#include "DlprofActivity.h"
+#include "DlprofActivityApi.h"
 #endif
 
 #include "ThreadUtil.h"
