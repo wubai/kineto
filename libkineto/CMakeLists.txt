@@ -30,7 +30,10 @@ set(KINETO_LIBRARY_TYPE "default" CACHE STRING
 set_property(CACHE KINETO_LIBRARY_TYPE PROPERTY STRINGS default shared)
 option(KINETO_BUILD_TESTS "Build kineto unit tests" ON)
 
-#set(CUDA_SOURCE_DIR  "/usr/local/cuda")
+# switch between cuda and dl
+#set(ENV{CUDA_SOURCE_DIR} "/usr/local/cuda")
+set(ENV{DL_SDK_DIR} "/LocalRun/dl/v2/sdk")
+
 set(CUPTI_INCLUDE_DIR "/usr/local/cuda/extras/CUPTI/include")
 set(CUDA_cupti_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libcupti.so")
 set(CUDA_nvperf_host_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libnvperf_host.so")
@@ -77,7 +80,7 @@ IF (NOT DL_SDK_DIR)
 endif()
 
 # Define file lists
-if (LIBKINETO_NOCUPTI AND LIBKINETO_NOROCTRACER)
+if (LIBKINETO_NOCUPTI AND LIBKINETO_NOROCTRACER AND LIBKINETO_NODLPROF)
     get_filelist("get_libkineto_cpu_only_srcs(with_api=False)" LIBKINETO_SRCS)
     message(INFO " CUPTI unavailable or disabled - not building GPU profilers")
 elseif(NOT LIBKINETO_NOROCTRACER)
@@ -249,6 +252,12 @@ install(EXPORT kinetoLibraryConfig DESTINATION share/cmake/kineto
   FILE kinetoLibraryConfig.cmake)
 
 if(KINETO_BUILD_TESTS)
-#  add_subdirectory(test)
+  if(NOT LIBKINETO_NOCUPTI)
+    add_subdirectory(test)
+  endif()
+
+  if(NOT LIBKINETO_NODLPROF)
+    add_subdirectory(dlprf_test)
+  endif()
   add_subdirectory("${LIBKINETO_THIRDPARTY_DIR}/googletest")
 endif()
