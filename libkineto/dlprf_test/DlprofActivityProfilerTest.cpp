@@ -215,8 +215,9 @@ TEST_F(CuptiActivityProfilerTest, SyncTrace) {
   // Verbose logging is useful for debugging
   std::vector<std::string> log_modules(
       {"CuptiActivityProfiler.cpp"});
-  SET_LOG_VERBOSITY_LEVEL(2, log_modules);
-
+  SET_LOG_VERBOSITY_LEVEL(INFO, log_modules);
+//  SET_LOG_SEVERITY_LEVEL(0);
+  LOG(INFO) << "setxx CuptiActivityProfilerTest" ;
   // Start and stop profiling
   CuptiActivityProfiler profiler(cuptiActivities_, /*cpu only*/ false);
   int64_t start_time_us = 100;

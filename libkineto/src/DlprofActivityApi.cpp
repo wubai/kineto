@@ -17,7 +17,7 @@ DlprofActivityApi& DlprofActivityApi::singleton() {
 }
 
 DlprofActivityApi::DlprofActivityApi() {
-    LOG(0) << "DlprofActivityApi";
+    LOG(0) << "DlprofActivityApi construct";
 }
 
 void DlprofActivityApi::pushCorrelationID(int id, CorrelationFlowType type) {
