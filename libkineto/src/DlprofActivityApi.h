@@ -5,6 +5,9 @@
 #include <set>
 #include <atomic>
 #include <functional>
+#include <memory>
+
+
 
 #ifdef HAS_DLPROF
 #include "hc/profile.h"
@@ -17,6 +20,7 @@
 //#include "json.hpp"
 #endif
 
+#include "libkineto.h"
 #include "ActivityType.h"
 #include "GenericTraceActivity.h"
 
@@ -31,7 +35,7 @@ class DlprofActivityApi {
     User
   };
 
-  DlprofActivityApi();
+  DlprofActivityApi() = default;
   DlprofActivityApi(const DlprofActivityApi&) = delete;
   DlprofActivityApi& operator=(const DlprofActivityApi&) = delete;
 
@@ -49,9 +53,10 @@ class DlprofActivityApi {
   void clearActivities();
   void teardownContext() {}
 
-  int processActivities(ActivityLogger& logger,
-                        std::function<const ITraceActivity*(int32_t)> linkedActivity,
-                        int64_t startTime, int64_t endTime);
+  virtual std::unique_ptr<libkineto::CpuTraceBuffer> activityBuffers();
+
+  virtual const int processActivities(libkineto::CpuTraceBuffer&,
+                                      std::function<void(const GenericTraceActivity*)> handler);
 
   void setMaxBufferSize(int size);
 

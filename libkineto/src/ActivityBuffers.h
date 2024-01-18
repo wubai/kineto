@@ -19,8 +19,13 @@ namespace KINETO_NAMESPACE {
 
 struct ActivityBuffers {
   std::list<std::unique_ptr<libkineto::CpuTraceBuffer>> cpu;
+#ifdef HAS_CUPTI
   std::unique_ptr<CuptiActivityBufferMap> gpu;
+#endif
 
+#ifdef HAS_DLPROF
+  std::unique_ptr<libkineto::CpuTraceBuffer> gpu;
+#endif
   // Add a wrapper object to the underlying struct stored in the buffer
   template<class T>
   const ITraceActivity& addActivityWrapper(const T& act) {

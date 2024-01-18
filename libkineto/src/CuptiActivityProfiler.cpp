@@ -40,6 +40,10 @@
 #ifdef HAS_ROCTRACER
 #include "RoctracerActivityApi.h"
 #endif
+#ifdef HAS_DLPROF
+#include "DlprofActivityApi.h"
+#endif
+
 #include "output_base.h"
 
 #include "Logger.h"
@@ -292,6 +296,23 @@ void CuptiActivityProfiler::processTraceInternal(ActivityLogger& logger) {
   }
 #endif // HAS_ROCTRACER
 
+#ifdef HAS_DLPROF
+  if (!cpuOnly_) {
+    VLOG(0) << "dlprof todo: Retrieving GPU activity buffers";
+    traceBuffers_->gpu = cupti_.activityBuffers();
+    if (traceBuffers_->gpu) {
+      const auto count = cupti_.processActivities(
+              *traceBuffers_->gpu,
+            std::bind(
+              &CuptiActivityProfiler::handleDlprofActivity,
+              this,
+              std::placeholders::_1,
+              &logger));
+      LOG(INFO) << "Processed " << count << " GPU records";
+    }
+  }
+#endif
+
   for (const auto& session : sessions_) {
     LOG(INFO) << "Processing child profiler trace";
     session->processTrace(logger);
@@ -408,6 +429,12 @@ void CuptiActivityProfiler::GpuUserEventMap::logEvents(ActivityLogger* logger) {
     }
   }
 }
+#ifdef HAS_DLPROF
+// Process generic Dlprof activity
+void CuptiActivityProfiler::handleDlprofActivity(const GenericTraceActivity* record, ActivityLogger* logger) {
+    LOG(INFO) << "handleDlprofActivity";
+}
+#endif
 
 #ifdef HAS_CUPTI
 inline bool CuptiActivityProfiler::outOfRange(const ITraceActivity& act) {
@@ -857,6 +884,12 @@ void CuptiActivityProfiler::configure(
   }
 #endif // HAS_CUPTI || HAS_ROCTRACER
 
+#ifdef HAS_DLPROF
+  if (!cpuOnly_) {
+    LOG(INFO) << "dlprof: Enabling GPU tracing";
+    cupti_.enableActivities(config_->selectedActivityTypes());
+  }
+#endif
   if (profilers_.size() > 0) {
     configureChildProfilers();
   }

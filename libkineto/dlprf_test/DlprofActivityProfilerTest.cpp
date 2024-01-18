@@ -61,42 +61,6 @@ struct MockCpuActivityBuffer : public CpuTraceBuffer {
 
 // Provides ability to easily create a few test dlprof ops
 struct MockCuptiActivityBuffer {
-//  void addRuntimeActivity(
-//      int32_t id,
-//      int64_t start_us, int64_t end_us, int64_t correlation) {
-//    auto& act = createActivity<GenericTraceActivity>(
-//        start_us, end_us, correlation);
-//    act.kind = CUPTI_ACTIVITY_KIND_RUNTIME;
-//    act.cbid = cbid;
-//    act.threadId = threadId();
-//    activities.push_back(reinterpret_cast<CUpti_Activity*>(&act));
-//  }
-//
-//  void addDriverActivity(
-//      CUpti_driver_api_trace_cbid_enum cbid,
-//      int64_t start_us, int64_t end_us, int64_t correlation) {
-//    auto& act = createActivity<CUpti_ActivityAPI>(
-//        start_us, end_us, correlation);
-//    act.kind = CUPTI_ACTIVITY_KIND_DRIVER;
-//    act.cbid = cbid;
-//    act.threadId = threadId();
-//    activities.push_back(reinterpret_cast<CUpti_Activity*>(&act));
-//  }
-//
-//  void addKernelActivity(
-//      int64_t start_us, int64_t end_us, int64_t correlation) {
-//    auto& act = createActivity<CUpti_ActivityKernel4>(
-//        start_us, end_us, correlation);
-//    act.kind = CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL;
-//    act.deviceId = 0;
-//    act.contextId = 0;
-//    act.streamId = 1;
-//    act.name = "kernel";
-//    act.gridX = act.gridY = act.gridZ = 1;
-//    act.blockX = act.blockY = act.blockZ = 1;
-//    activities.push_back(reinterpret_cast<CUpti_Activity*>(&act));
-//  }
-
   void addMemcpyActivity(
       int64_t start_us, int64_t end_us, int64_t correlation) {
     GenericTraceActivity* act = new GenericTraceActivity;
@@ -113,29 +77,6 @@ struct MockCuptiActivityBuffer {
     activities.push_back(act);
   }
 
-//  void addSyncActivity(
-//      int64_t start_us, int64_t end_us, int64_t correlation,
-//      CUpti_ActivitySynchronizationType type, int64_t stream = 1) {
-//    auto& act = createActivity<CUpti_ActivitySynchronization>(
-//        start_us, end_us, correlation);
-//    act.kind = CUPTI_ACTIVITY_KIND_SYNCHRONIZATION;
-//    act.type = type;
-//    act.contextId = 0;
-//    act.streamId = stream;
-//    activities.push_back(reinterpret_cast<CUpti_Activity*>(&act));
-//  }
-
-//  template<class T>
-//  T& createActivity(
-//      int64_t start_us, int64_t end_us, int64_t correlation) {
-//    T& act = *static_cast<T*>(malloc(sizeof(T)));
-//    bzero(&act, sizeof(act));
-//    act.start = start_us * 1000;
-//    act.end = end_us * 1000;
-//    act.correlationId = correlation;
-//    return act;
-//  }
-
   ~MockCuptiActivityBuffer() {
     for (GenericTraceActivity* act : activities) {
       free(act);
@@ -148,27 +89,20 @@ struct MockCuptiActivityBuffer {
 // Mock parts of the CuptiActivityApi
 class MockCuptiActivities : public DlprofActivityApi {
  public:
-  virtual int processActivities(
-    ActivityLogger& logger, std::function<const ITraceActivity*(int32_t)> linkedActivity,
-    int64_t startTime, int64_t endTime)  {
-//    for (CUpti_Activity* act : activityBuffer->activities) {
-//      handler(act);
-//    }
-//    return {activityBuffer->activities.size(), 100};
+  const int processActivities(libkineto::CpuTraceBuffer&, std::function<void(const GenericTraceActivity*)> handler) override  {
+    LOG(0) << "Mock parts of the CuptiActivityApi: processActivities ";
+    int n = 0;
+    for (GenericTraceActivity* act : activityBuffer->activities) {
+      handler(act);
+      n++;
+    }
+    return n;
   }
-
-//  virtual std::unique_ptr<CuptiActivityBufferMap>
-//  activityBuffers() override {
-//    auto map = std::make_unique<CuptiActivityBufferMap>();
-//    auto buf = std::make_unique<CuptiActivityBuffer>(100);
-//    uint8_t* addr = buf->data();
-//    (*map)[addr] = std::move(buf);
-//    return map;
-//  }
-
-//  void bufferRequestedOverride(uint8_t** buffer, size_t* size, size_t* maxNumRecords) {
-//    this->bufferRequested(buffer, size, maxNumRecords);
-//  }
+  std::unique_ptr<libkineto::CpuTraceBuffer> activityBuffers() override{
+    LOG(0) << "dlprofActivityApi: activityBuffers ";
+      auto cputracexx = std::make_unique<libkineto::CpuTraceBuffer>();
+      return std::move(cputracexx);
+  }
 
   std::unique_ptr<MockCuptiActivityBuffer> activityBuffer;
 };

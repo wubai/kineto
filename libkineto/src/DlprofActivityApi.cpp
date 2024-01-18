@@ -16,16 +16,18 @@ DlprofActivityApi& DlprofActivityApi::singleton() {
   return instance;
 }
 
-DlprofActivityApi::DlprofActivityApi() {
-    LOG(0) << "DlprofActivityApi construct";
+std::unique_ptr<libkineto::CpuTraceBuffer> DlprofActivityApi::activityBuffers() {
+    LOG(0) << "DlprofActivityApi::activityBuffers";
+    auto cputrace = std::make_unique<libkineto::CpuTraceBuffer>();
+    return std::move(cputrace);
 }
 
 void DlprofActivityApi::pushCorrelationID(int id, CorrelationFlowType type) {
-    LOG(0) << "pushCorrelationID(" << id << ")";
+    LOG(0) << "DlprofActivityApi pushCorrelationID(" << id << ")";
 }
 
 void DlprofActivityApi::popCorrelationID(CorrelationFlowType type) {
-    LOG(0) << "popCorrelationID";
+    LOG(0) << "DlprofActivityApi popCorrelationID";
 }
 
 void DlprofActivityApi::setMaxBufferSize(int size) {
@@ -37,12 +39,18 @@ void DlprofActivityApi::clearActivities() {
 
 void DlprofActivityApi::enableActivities(
     const std::set<ActivityType>& selected_activities) {
-    LOG(0) << "enableCuptiActivities";
+    LOG(INFO) << "dlprof enableCuptiActivities default: all";
 }
 
 void DlprofActivityApi::disableActivities(
     const std::set<ActivityType>& selected_activities) {
-    LOG(0) << "disableCuptiActivities";
+    LOG(0) << "dlprof: disableCuptiActivities";
+}
+
+const int DlprofActivityApi::processActivities(libkineto::CpuTraceBuffer&,
+                                      std::function<void(const GenericTraceActivity*)> handler){
+    LOG(0) << "new DlprofActivityApi::processActivities";
+    return 0;
 }
 
 DlprofActivityApi::~DlprofActivityApi() {
