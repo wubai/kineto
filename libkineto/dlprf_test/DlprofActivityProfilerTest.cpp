@@ -63,7 +63,7 @@ struct MockCpuActivityBuffer : public CpuTraceBuffer {
 struct MockCuptiActivityBuffer {
   void addMemcpyActivity(
       int64_t start_us, int64_t end_us, int64_t correlation) {
-    GenericTraceActivity* act = new GenericTraceActivity;
+    std::unique_ptr<GenericTraceActivity> act = std::make_unique<GenericTraceActivity>();
     act->activityType = ActivityType::GPU_MEMCPY;
     act->activityName = "DL_MEMCPY";
     act->device = 0;
@@ -74,34 +74,36 @@ struct MockCuptiActivityBuffer {
 
     act->flow.id = correlation;
     act->flow.type = kLinkAsyncCpuGpu;
-    activities.push_back(act);
+    activities.push_back(std::move(act));
   }
 
   ~MockCuptiActivityBuffer() {
-    for (GenericTraceActivity* act : activities) {
-      free(act);
-    }
   }
 
-  std::vector<GenericTraceActivity*> activities;
+  std::vector<std::unique_ptr<GenericTraceActivity>> activities;
 };
 
 // Mock parts of the CuptiActivityApi
 class MockCuptiActivities : public DlprofActivityApi {
  public:
-  const int processActivities(libkineto::CpuTraceBuffer&, std::function<void(const GenericTraceActivity*)> handler) override  {
+  const int processActivities(libkineto::CpuTraceBuffer& gpubuffer, std::function<void(const GenericTraceActivity*)> handler) override  {
     LOG(0) << "Mock parts of the CuptiActivityApi: processActivities ";
     int n = 0;
-    for (GenericTraceActivity* act : activityBuffer->activities) {
-      handler(act);
+    for (const auto& act : gpubuffer.activities) {
+      handler(act.get());
       n++;
     }
     return n;
   }
+
+  // dlprof的gpu与cpu一样，使用的CpuTraceBuffer
   std::unique_ptr<libkineto::CpuTraceBuffer> activityBuffers() override{
     LOG(0) << "dlprofActivityApi: activityBuffers ";
-      auto cputracexx = std::make_unique<libkineto::CpuTraceBuffer>();
-      return std::move(cputracexx);
+      auto gputrace = std::make_unique<libkineto::CpuTraceBuffer>();
+      for (auto& act : activityBuffer->activities) {
+        gputrace->activities.push_back(std::move(act));
+      }
+      return std::move(gputrace);
   }
 
   std::unique_ptr<MockCuptiActivityBuffer> activityBuffer;
@@ -150,8 +152,6 @@ TEST_F(CuptiActivityProfilerTest, SyncTrace) {
   std::vector<std::string> log_modules(
       {"CuptiActivityProfiler.cpp"});
   SET_LOG_VERBOSITY_LEVEL(INFO, log_modules);
-//  SET_LOG_SEVERITY_LEVEL(0);
-  LOG(INFO) << "setxx CuptiActivityProfilerTest" ;
   // Start and stop profiling
   CuptiActivityProfiler profiler(cuptiActivities_, /*cpu only*/ false);
   int64_t start_time_us = 100;
@@ -180,7 +180,10 @@ TEST_F(CuptiActivityProfilerTest, SyncTrace) {
 //  gpuOps->addDriverActivity(CU_LAUNCH_KERNEL, 265, 275, 4);
 //  gpuOps->addRuntimeActivity(CUDA_STREAM_SYNC, 246, 340, 5);
 //  gpuOps->addKernelActivity(150, 170, 1);
+  gpuOps->addMemcpyActivity(150, 170, 1);
   gpuOps->addMemcpyActivity(240, 250, 2);
+  gpuOps->addMemcpyActivity(260, 320, 3);
+  gpuOps->addMemcpyActivity(330, 350, 4);
 //  gpuOps->addKernelActivity(260, 320, 3);
 //  gpuOps->addKernelActivity(330, 350, 4);
 //  gpuOps->addSyncActivity(321, 323, 5, CUPTI_ACTIVITY_SYNCHRONIZATION_TYPE_STREAM_SYNCHRONIZE);
@@ -199,7 +202,7 @@ TEST_F(CuptiActivityProfilerTest, SyncTrace) {
   profiler.processTrace(*logger);
 
   // Profiler can be reset at this point - logger owns the activities
-  profiler_->reset();
+  profiler.reset();
 
   // Wrapper that allows iterating over the activities
   ActivityTrace trace(std::move(logger), loggerFactory);

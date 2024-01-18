@@ -298,7 +298,7 @@ void CuptiActivityProfiler::processTraceInternal(ActivityLogger& logger) {
 
 #ifdef HAS_DLPROF
   if (!cpuOnly_) {
-    VLOG(0) << "dlprof todo: Retrieving GPU activity buffers";
+    VLOG(0) << "dlprof: Retrieving GPU activity buffers";
     traceBuffers_->gpu = cupti_.activityBuffers();
     if (traceBuffers_->gpu) {
       const auto count = cupti_.processActivities(
