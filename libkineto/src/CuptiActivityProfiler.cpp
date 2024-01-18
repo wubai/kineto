@@ -433,6 +433,8 @@ void CuptiActivityProfiler::GpuUserEventMap::logEvents(ActivityLogger* logger) {
 // Process generic Dlprof activity
 void CuptiActivityProfiler::handleDlprofActivity(const GenericTraceActivity* record, ActivityLogger* logger) {
     LOG(INFO) << "handleDlprofActivity";
+    LOG(INFO) << "activityName: " << record->activityName << " act->startTime:" << record->startTime;
+    logger->handleGenericActivity(*record);
 }
 #endif
 
