@@ -1187,12 +1187,12 @@ CuptiActivityProfiler::getLoggerMetadata() {
 }
 
 void CuptiActivityProfiler::resetTraceData() {
-#if defined(HAS_CUPTI) || defined(HAS_ROCTRACER)
+#if defined(HAS_CUPTI) || defined(HAS_ROCTRACER) || defined(HAS_DLPROF)
   if (!cpuOnly_) {
     cupti_.clearActivities();
     cupti_.teardownContext();
   }
-#endif // HAS_CUPTI || HAS_ROCTRACER
+#endif // HAS_CUPTI || HAS_ROCTRACER || HAS_DLPROF
   activityMap_.clear();
   cpuCorrelationMap_.clear();
   correlatedCudaActivities_.clear();

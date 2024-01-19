@@ -54,9 +54,6 @@ struct MockCpuActivityBuffer : public CpuTraceBuffer {
     op.device = systemThreadId();
     op.resource = systemThreadId();
     op.id = correlation;
-    op.flow.id = correlation;
-    op.flow.type = kLinkAsyncCpuGpu;
-    op.flow.start = true;
     emplace_activity(std::move(op));
     span.opCount++;
   }
@@ -75,11 +72,31 @@ struct MockCuptiActivityBuffer {
     act->endTime = end_us;
     act->id = correlation;
     act->device = 0;
-    act->resource = correlation;
+    act->resource = 0;
 
     act->flow.start = false;
     act->flow.id = correlation;
     act->flow.type = kLinkAsyncCpuGpu;
+    activities.push_back(std::move(act));
+  }
+
+  void addRuntimeActivity(int64_t start_us, int64_t end_us, int64_t correlation) {
+    std::unique_ptr<GenericTraceActivity> act = std::make_unique<GenericTraceActivity>();
+    act->activityType = ActivityType::CUDA_RUNTIME;
+    act->activityName = "cudaRuntime";
+
+    uint32_t streamId = 2;
+    act->addMetadata("stream", fmt::format("{}", streamId));
+    act->startTime = start_us;
+    act->endTime = end_us;
+    act->id = correlation;
+    act->device = systemThreadId();
+    act->resource = systemThreadId();
+
+    act->flow.start = true;
+    act->flow.id = correlation;
+    act->flow.type = kLinkAsyncCpuGpu;
+
     activities.push_back(std::move(act));
   }
 
@@ -180,10 +197,10 @@ TEST_F(CuptiActivityProfilerTest, SyncTrace) {
 
   // And some GPU ops
   auto gpuOps = std::make_unique<MockCuptiActivityBuffer>();
-//  gpuOps->addRuntimeActivity(CUDA_LAUNCH_KERNEL, 133, 138, 1);
-//  gpuOps->addRuntimeActivity(CUDA_MEMCPY, 210, 220, 2);
-//  gpuOps->addRuntimeActivity(CUDA_LAUNCH_KERNEL, 230, 245, 3);
-//  gpuOps->addDriverActivity(CU_LAUNCH_KERNEL, 265, 275, 4);
+  gpuOps->addRuntimeActivity(133, 138, 1);
+  gpuOps->addRuntimeActivity(210, 220, 2);
+  gpuOps->addRuntimeActivity(230, 245, 3);
+  gpuOps->addRuntimeActivity(265, 275, 4);
 //  gpuOps->addRuntimeActivity(CUDA_STREAM_SYNC, 246, 340, 5);
 //  gpuOps->addKernelActivity(150, 170, 1);
   gpuOps->addMemcpyActivity(150, 170, 1);
@@ -243,7 +260,7 @@ TEST_F(CuptiActivityProfilerTest, SyncTrace) {
 //  EXPECT_EQ(resourceIds[2], 1);
 
 #ifdef __linux__
-  char filename[] = "/tmp/libkineto_testXXXXXX.json";
+  char filename[] = "./libkineto_testXXXXXX.json";
   mkstemps(filename, 5);
   trace.save(filename);
   // Check that the expected file was written and that it has some content
