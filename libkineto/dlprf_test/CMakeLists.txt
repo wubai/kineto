@@ -23,3 +23,5 @@ foreach(src ${SOURCES_CPP})
     target_link_libraries(${target} PUBLIC tmp_lib)
 endforeach()
 
+add_subdirectory(dlprof)
+
