@@ -30,6 +30,16 @@ set(KINETO_LIBRARY_TYPE "default" CACHE STRING
 set_property(CACHE KINETO_LIBRARY_TYPE PROPERTY STRINGS default shared)
 option(KINETO_BUILD_TESTS "Build kineto unit tests" ON)
 
+# switch between cuda and dl
+#set(ENV{CUDA_SOURCE_DIR} "/usr/local/cuda")
+
+set(CUPTI_INCLUDE_DIR "/usr/local/cuda/extras/CUPTI/include")
+set(CUDA_cupti_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libcupti.so")
+set(CUDA_nvperf_host_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libnvperf_host.so")
+set(CUDA_nvperf_target_LIBRARY "/usr/local/cuda/extras/CUPTI/lib64/libnvperf_target.so")
+
+
+set(LIBKINETO_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(LIBKINETO_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(LIBKINETO_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(LIBKINETO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -217,4 +227,7 @@ install(EXPORT kinetoLibraryConfig DESTINATION share/cmake/kineto
 
 if(KINETO_BUILD_TESTS)
   add_subdirectory(test)
+  add_subdirectory("${LIBKINETO_THIRDPARTY_DIR}/googletest")
+  add_subdirectory("${LIBKINETO_THIRDPARTY_DIR}/folly")
+
 endif()
