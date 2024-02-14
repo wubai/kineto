@@ -116,3 +116,15 @@ target_link_libraries(PidInfoTest PRIVATE gtest_main
 target_include_directories(PidInfoTest PRIVATE "${LIBKINETO_DIR}")
 gtest_discover_tests(PidInfoTest)
 
+# CuptiProfilerApiTest
+enable_language(CUDA)
+add_executable(CuptiProfilerApiTest CuptiProfilerApiTest.cu)
+target_compile_options(CuptiProfilerApiTest PRIVATE "${KINETO_COMPILE_OPTIONS}")
+target_link_libraries(CuptiProfilerApiTest PRIVATE kineto
+                                                gtest_main
+                                                cuda
+                                                "${CUDA_SOURCE_DIR}/lib64/libcudart.so")
+target_include_directories(CuptiProfilerApiTest PRIVATE "${LIBKINETO_DIR}"
+                                                        "${LIBKINETO_DIR}/include"
+                                                        "${CUPTI_INCLUDE_DIR}")
+add_test(NAME CuptiProfilerApiTest_ COMMAND CuptiProfilerApiTest)
