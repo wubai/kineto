@@ -53,6 +53,7 @@ if (NOT ROCM_SOURCE_DIR)
 endif()
 
 if (KINETO_BUILD_TESTS)
+  enable_testing()
   if (NOT CUPTI_INCLUDE_DIR)
     find_path(CUPTI_INCLUDE_DIR cupti.h PATHS
         ${CUDA_SOURCE_DIR}/extras/CUPTI/include
