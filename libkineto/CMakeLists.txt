@@ -87,9 +87,23 @@ if (KINETO_BUILD_TESTS)
         NO_DEFAULT_PATH)
   endif()
 
+  if (NOT CUDA_cudart_LIBRARY)
+    set(CUDA_CUDART_LIB_NAME "libcudart.so")
+    find_library(CUDA_CUDART_LIB_PATH ${CUDA_CUDART_LIB_NAME} PATHS
+        ${CUDA_SOURCE_DIR}
+        ${CUDA_SOURCE_DIR}/lib
+        ${CUDA_SOURCE_DIR}/lib64
+        NO_DEFAULT_PATH)
+  endif()
+
   if(CUDA_NVPERF_HOST_LIB_PATH)
     set(CUDA_nvperf_host_LIBRARY ${CUDA_NVPERF_HOST_LIB_PATH})
     message(INFO "  CUDA_nvperf_host_LIBRARY = ${CUDA_nvperf_host_LIBRARY}")
+  endif()
+
+  if(CUDA_CUDART_LIB_PATH)
+    set(CUDA_cudart_LIBRARY ${CUDA_CUDART_LIB_PATH})
+    message(INFO "  CUDA_cudart_LIBRARY = ${CUDA_cudart_LIBRARY}")
   endif()
 
   if(CUPTI_LIBRARY_PATH AND CUPTI_INCLUDE_DIR)
